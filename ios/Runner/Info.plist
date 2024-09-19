@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Using the library for Storing captured image</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Using the mic for live recording of voice</string>
 	<key>NSCameraUsageDescription</key>
 	<string>To capture user image and authenticate in real time</string>
 	<key>CFBundleDevelopmentRegion</key>
