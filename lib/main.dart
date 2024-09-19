@@ -1,26 +1,18 @@
 import 'dart:io';
-import 'dart:ui';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image/image.dart' as img;
-
 import 'package:realtime_face_recognition/ML/Recognition.dart';
-
-import 'ML/Recognition.dart';
-import 'ML/Recognition.dart';
-import 'ML/Recognition.dart';
-import 'ML/Recognition.dart';
 import 'ML/Recognizer.dart';
 
 late List<CameraDescription> cameras;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   cameras = await availableCameras();
-  runApp(MyApp());
+  cameras.isNotEmpty ? runApp(MyApp()) : CircularProgressIndicator();
 }
 
 class MyApp extends StatelessWidget {
