@@ -103,6 +103,7 @@ DEPENDENCIES:
   - google_mlkit_face_detection (from `.symlinks/plugins/google_mlkit_face_detection/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - sqflite (from `.symlinks/plugins/sqflite/darwin`)
+  - TensorFlowLiteSwift
   - tflite_flutter (from `.symlinks/plugins/tflite_flutter/ios`)
 
 SPEC REPOS:
@@ -161,6 +162,6 @@ SPEC CHECKSUMS:
   TensorFlowLiteSwift: 3a4928286e9e35bdd3e17970f48e53c80d25e793
   tflite_flutter: 9433d086a3060431bbc9f3c7c20d017db0e72d08
 
-PODFILE CHECKSUM: 7be2f5f74864d463a8ad433546ed1de7e0f29aef
+PODFILE CHECKSUM: 562100addeab53ecc754ba656b116f69690e9561
 
 COCOAPODS: 1.15.2
