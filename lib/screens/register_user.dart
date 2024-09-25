@@ -25,6 +25,7 @@ class _RegisterUserState extends State<RegisterUser> {
   late ImagePicker imagePicker;
   late FaceDetector faceDetector;
   late Recognizer recognizer;
+  bool isLoading = false; // This variable is to track loading state
 
   List<Face> faces = [];
 
@@ -52,6 +53,9 @@ class _RegisterUserState extends State<RegisterUser> {
 
   //Face Detection logic
   doFaceDetection() async {
+    setState(() {
+      isLoading = true; // To Show loading indicator
+    });
     InputImage inputImage = InputImage.fromFile(_image!);
 
     //FACE DETECTION
@@ -81,9 +85,13 @@ class _RegisterUserState extends State<RegisterUser> {
           width: width.toInt(),
           height: height.toInt());
       Recognition recognition = recognizer.recognize(croppedFace, boundingBox);
+
       showFaceRegistrationDialogue(
           Uint8List.fromList(img.encodeBmp(croppedFace)), recognition);
     }
+    setState(() {
+      isLoading = false; // Hide loading indicator after processing
+    });
     drawRectangleAroundFaces();
   }
 
@@ -136,6 +144,7 @@ class _RegisterUserState extends State<RegisterUser> {
                         textEditingController.text, recognition.embeddings);
                     textEditingController.text = "";
                     Navigator.pop(context);
+                    Navigator.of(context).pop(); // Go back to the main page
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                       content: Text("Face Registered"),
                     ));
@@ -162,59 +171,65 @@ class _RegisterUserState extends State<RegisterUser> {
       appBar: AppBar(
         title: const Text("Register Image"),
       ),
-      body: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _image != null
-                ?
-                //  Below code is used to show image in UI...
-
-                // SizedBox(
-                //     width: screenWidth / 1.5,
-                //     height: screenHeight / 2,
-                //     child: Image.file(_image!),
-                //   )
-
-                // Now we will draw a square paint in selected or captured image face\
-                Container(
-                    margin: const EdgeInsets.all(8.0),
-                    child: FittedBox(
-                      child: SizedBox(
-                        height: imageHeight.toDouble(),
-                        width: imageWidth.toDouble(),
-                        child: CustomPaint(
-                          painter: FacePainter(
-                            facesList: faces,
-                            imageFile: image,
-                          ),
-                        ),
-                      ),
-                    ),
-                  )
-                : Image.asset(
-                    "assets/icons/face.png",
-                    height: screenHeight / 2.8,
-                    width: screenWidth / 1.5,
-                  ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                roundedContainer(context,
-                    child: InkWell(
-                      onTap: () => captureImage(),
-                      child: const Icon(
-                        Icons.camera,
-                        size: 50.0,
-                        color: Colors.blue,
-                      ),
-                    )),
-              ],
+      body: isLoading
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 20),
+                  Text("Please wait, your image is processing..."),
+                ],
+              ),
             )
-          ],
-        ),
-      ),
+          : Stack(
+              children: [
+                // Face icons at the top center with padding
+                Positioned(
+                  top: 30, // 30 pixels from the top
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: _image != null
+                        ? FittedBox(
+                            child: SizedBox(
+                              height: imageHeight.toDouble(),
+                              width: imageWidth.toDouble(),
+                              child: CustomPaint(
+                                painter: FacePainter(
+                                  facesList: faces,
+                                  imageFile: image,
+                                ),
+                              ),
+                            ),
+                          )
+                        : Image.asset(
+                            "assets/icons/face.png",
+                            height: screenHeight / 2.8,
+                            width: screenWidth / 1.5,
+                          ),
+                  ),
+                ),
+
+                // Capture Image button at the bottom center
+                Positioned(
+                  bottom: 50, // 30 pixels from the bottom
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: roundedContainer(context,
+                        child: InkWell(
+                          onTap: () => captureImage(),
+                          child: const Icon(
+                            Icons.camera,
+                            size: 50.0,
+                            color: Colors.blue,
+                          ),
+                        )),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }

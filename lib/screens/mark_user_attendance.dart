@@ -7,6 +7,7 @@ import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image/image.dart' as img;
 import 'package:realtime_face_recognition/ML/Recognition.dart';
 import 'package:realtime_face_recognition/ML/Recognizer.dart';
+import 'package:realtime_face_recognition/routes.dart';
 
 class MarkUserAttendance extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -27,6 +28,7 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
   late CameraDescription description;
   CameraLensDirection camDirec = CameraLensDirection.front;
   late List<Recognition> recognitions = [];
+  bool isStreamingFrame = true;
 
   //TODO declare face detector
   late FaceDetector faceDetector;
@@ -67,21 +69,32 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
     await initializeCamera();
   }
 
+  int frameSkip = 5; // Detect faces every 5 frames
+  int frameCount = 0;
+
 //TODO code to initialize the camera feed
   initializeCamera() async {
     controller = CameraController(description, ResolutionPreset.medium,
         imageFormatGroup: Platform.isAndroid
             ? ImageFormatGroup.nv21 // for Android
             : ImageFormatGroup.bgra8888,
-        enableAudio: false); // for iOS);
+        enableAudio: false); // for iOS
     await controller.initialize().then((_) {
       if (!mounted) {
         return;
       }
-      controller.startImageStream((image) => {
-            if (!isBusy)
-              {isBusy = true, frame = image, doFaceDetectionOnFrame()}
-          });
+
+      controller.startImageStream((image) {
+        // Skip frames based on the frameSkip value
+        if (!isBusy && frameCount % frameSkip == 0) {
+          isBusy = true;
+          frame = image;
+          doFaceDetectionOnFrame();
+        }
+
+        // Increment frame count
+        frameCount++;
+      });
     });
   }
 
@@ -92,12 +105,15 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
     //TODO convert frame into InputImage format
     print('dfd');
     InputImage? inputImage = getInputImage();
-    //TODO pass InputImage to face detection model and detect faces
-    List<Face> faces = await faceDetector.processImage(inputImage!);
+    if (inputImage != null) {
+      //TODO pass InputImage to face detection model and detect faces
 
-    print("fl=" + faces.length.toString());
-    //TODO perform face recognition on detected faces
-    performFaceRecognition(faces);
+      List<Face> faces = await faceDetector.processImage(inputImage);
+      print("fl=" + faces.length.toString());
+
+      //TODO perform face recognition on detected faces
+      await performFaceRecognition(faces);
+    }
   }
 
   img.Image? image;
@@ -124,76 +140,62 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
 
       //TODO pass cropped face to face recognition model
       Recognition recognition = recognizer.recognize(croppedFace, faceRect);
-      if (recognition.distance > 1.0) {
+      if (recognition.distance > 1.5) {
         recognition.name = "Unknown";
+      } else {
+        showAttendanceMarkedDialog(recognition.name);
       }
       recognitions.add(recognition);
-
-      //TODO show face registration dialogue
-      if (register) {
-        showFaceRegistrationDialogue(croppedFace!, recognition);
-        register = false;
-      }
     }
-
-    setState(() {
-      isBusy = false;
-      _scanResults = recognitions;
-    });
+    if (mounted) {
+      setState(
+        () {
+          isBusy = false;
+          _scanResults = recognitions;
+        },
+      );
+    }
   }
 
-  //TODO Face Registration Dialogue
-  TextEditingController textEditingController = TextEditingController();
-  showFaceRegistrationDialogue(img.Image croppedFace, Recognition recognition) {
-    showDialog(
+  // // Play face recognition animation
+  // Future<void> playFaceRecognitionAnimation() async {
+  //   setState(() {
+  //     isAnimationPlaying = true; // Start the animation
+  //   });
+
+  //   // Show animation for 5 seconds
+  //   // await Future.delayed(const Duration(seconds: 5));
+
+  //   setState(() {
+  //     isAnimationPlaying = false; // Stop the animation
+  //   });
+
+  //   // After animation, show dialog indicating attendance marked
+  //   await showAttendanceMarkedDialog();
+  // }
+
+  // Show attendance marked dialog
+  Future<void> showAttendanceMarkedDialog(String name) async {
+    await controller.stopImageStream();
+    isStreamingFrame = false;
+    return showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Face Registration", textAlign: TextAlign.center),
-        alignment: Alignment.center,
-        content: SizedBox(
-          height: 340,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(
-                height: 20,
-              ),
-              Image.memory(
-                Uint8List.fromList(img.encodeBmp(croppedFace!)),
-                width: 200,
-                height: 200,
-              ),
-              SizedBox(
-                width: 200,
-                child: TextField(
-                    controller: textEditingController,
-                    decoration: const InputDecoration(
-                        fillColor: Colors.white,
-                        filled: true,
-                        hintText: "Enter Name")),
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              ElevatedButton(
-                  onPressed: () {
-                    recognizer.registerFaceInDB(
-                        textEditingController.text, recognition.embeddings);
-                    textEditingController.text = "";
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text("Face Registered"),
-                    ));
-                  },
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      minimumSize: const Size(200, 40)),
-                  child: const Text("Register"))
-            ],
-          ),
-        ),
-        contentPadding: EdgeInsets.zero,
-      ),
+      barrierDismissible: false, // Prevent dismissal of dialog
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Attendance Marked'),
+          content: Text('$name Your attendance has been successfully marked.'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -355,7 +357,16 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
     if (_scanResults == null ||
         controller == null ||
         !controller.value.isInitialized) {
-      return const Center(child: Text('Please wait initializing camera'));
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator.adaptive(),
+            SizedBox(height: 20),
+            Text("Please wait, your camera is initializing..."),
+          ],
+        ),
+      );
     }
     final Size imageSize = Size(
       controller.value.previewSize!.height,
@@ -378,9 +389,11 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
       description = widget.cameras[0];
     }
     await controller.stopImageStream();
-    setState(() {
-      controller;
-    });
+    if (mounted) {
+      setState(() {
+        controller;
+      });
+    }
 
     initializeCamera();
   }
@@ -388,7 +401,11 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
   //TODO close all resources
   @override
   void dispose() {
+    if (isStreamingFrame) {
+      controller.stopImageStream();
+    }
     controller?.dispose();
+    faceDetector.close();
     super.dispose();
   }
 
@@ -426,59 +443,34 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
       );
     }
 
-    //TODO View for displaying the bar to switch camera direction or for registering faces
-    stackChildren.add(Positioned(
-      top: size.height - 140,
-      left: 0,
-      width: size.width,
-      height: 80,
-      child: Card(
-        margin: const EdgeInsets.only(left: 20, right: 20),
-        color: Colors.blue,
-        child: Center(
-          child: Container(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.cached,
-                        color: Colors.white,
-                      ),
-                      iconSize: 40,
-                      color: Colors.black,
-                      onPressed: () {
-                        _toggleCameraDirection();
-                      },
+    //TODO View for displaying the bar to switch camera direction
+    controller.value.isInitialized
+        ? stackChildren.add(
+            Positioned(
+              bottom: 50,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  decoration: BoxDecoration(
+                      color: Colors.blue,
+                      borderRadius: BorderRadius.circular(100)),
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.cached,
+                      color: Colors.white,
                     ),
-                    Container(
-                      width: 30,
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.face_retouching_natural,
-                        color: Colors.white,
-                      ),
-                      iconSize: 40,
-                      color: Colors.black,
-                      onPressed: () {
-                        setState(() {
-                          register = true;
-                        });
-                      },
-                    )
-                  ],
+                    iconSize: 60,
+                    color: Colors.black,
+                    onPressed: () {
+                      _toggleCameraDirection();
+                    },
+                  ),
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
-      ),
-    ));
+          )
+        : SizedBox();
 
     return SafeArea(
       child: Scaffold(
