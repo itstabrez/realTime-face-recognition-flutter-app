@@ -140,7 +140,7 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
 
       //TODO pass cropped face to face recognition model
       Recognition recognition = recognizer.recognize(croppedFace, faceRect);
-      if (recognition.distance > 1.5) {
+      if (recognition.distance > 1.0) {
         recognition.name = "Unknown";
       } else {
         showAttendanceMarkedDialog(recognition.name);
