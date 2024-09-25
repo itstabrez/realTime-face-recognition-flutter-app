@@ -135,11 +135,12 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
         register = false;
       }
     }
-
-    setState(() {
-      isBusy = false;
-      _scanResults = recognitions;
-    });
+    if (mounted) {
+      setState(() {
+        isBusy = false;
+        _scanResults = recognitions;
+      });
+    }
   }
 
   //TODO Face Registration Dialogue
