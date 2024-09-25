@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image/image.dart' as img;
 import 'package:realtime_face_recognition/ML/Recognition.dart';
+import 'package:realtime_face_recognition/geofencing.dart';
 import 'ML/Recognizer.dart';
 
 late List<CameraDescription> cameras;
@@ -34,7 +35,7 @@ class _MyHomePageState extends State<MyHomePage> {
   dynamic controller;
   bool isBusy = false;
   late Size size;
-  late CameraDescription description = cameras[1];
+  CameraDescription description = cameras[1];
   CameraLensDirection camDirec = CameraLensDirection.front;
   late List<Recognition> recognitions = [];
 
@@ -43,6 +44,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
   //TODO declare face recognizer
   late Recognizer recognizer;
+
+  // Instantiate the GeofencingService
+  late GeofencingService geofencingService;
+
 
   @override
   void initState() {
@@ -54,7 +59,16 @@ class _MyHomePageState extends State<MyHomePage> {
     faceDetector = FaceDetector(options: options);
     //TODO initialize face recognizer
     recognizer = Recognizer();
-    //TODO initialize camera footage
+
+    // Initialize the GeofencingService with context and geofence details
+    // Mayoor School Noida is the testing location
+    geofencingService = GeofencingService(
+      context: context,
+      targetLatitude: 28.54405692031371,    // Example latitude
+      targetLongitude: 77.33769928770626, // Example longitude
+      radiusInMeters: 100.0,         // Example radius
+    );
+    // Initialize camera footage
     initializeCamera();
   }
 
@@ -87,6 +101,8 @@ class _MyHomePageState extends State<MyHomePage> {
   dynamic _scanResults;
   CameraImage? frame;
   doFaceDetectionOnFrame() async {
+
+    await geofencingService.checkDeviceInRange();
     //TODO convert frame into InputImage format
     print('dfd');
     InputImage? inputImage = getInputImage();
