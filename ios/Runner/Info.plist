@@ -2,18 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>This app needs access to location when open.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Using the library for Storing captured image</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Using the mic for live recording of voice</string>
+	<string>Need library access to register faces</string>
 	<key>NSCameraUsageDescription</key>
-	<string>To capture user image and authenticate in real time</string>
+	<string>Need camera access to recognize face in real time</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Need camera access to recognize voice in real time</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Realtime Face Recognition</string>
+	<string>Flutter Application Image Ios</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -21,7 +19,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>realtime_face_recognition</string>
+	<string>flutter_application_image_ios</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
