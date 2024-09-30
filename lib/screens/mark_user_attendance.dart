@@ -21,7 +21,8 @@ class MarkUserAttendance extends StatefulWidget {
   State<MarkUserAttendance> createState() => _MarkUserAttendanceState();
 }
 
-class _MarkUserAttendanceState extends State<MarkUserAttendance> {
+class _MarkUserAttendanceState extends State<MarkUserAttendance>
+    with SingleTickerProviderStateMixin {
   dynamic controller;
   bool isBusy = false;
   late Size size;
@@ -29,6 +30,8 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
   CameraLensDirection camDirec = CameraLensDirection.front;
   late List<Recognition> recognitions = [];
   bool isStreamingFrame = true;
+  bool isDetecting = true;
+  late AnimationController _animationController;
 
   //TODO declare face detector
   late FaceDetector faceDetector;
@@ -65,12 +68,16 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
     //   radiusInMeters: 100.0, // Example radius
     // );
 
+    _animationController = AnimationController(
+      duration: const Duration(seconds: 1),
+      vsync: this,
+    )..repeat(reverse: true); // Repeats the animation back and forth
     // Initialize camera footage
     await initializeCamera();
   }
 
-  int frameSkip = 5; // Detect faces every 5 frames
-  int frameCount = 0;
+  List<List<Recognition>> frameBuffer = [];
+  int maxBufferSize = 3; // Number of frames to buffer
 
 //TODO code to initialize the camera feed
   initializeCamera() async {
@@ -86,14 +93,11 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
 
       controller.startImageStream((image) {
         // Skip frames based on the frameSkip value
-        if (!isBusy && frameCount % frameSkip == 0) {
+        if (!isBusy) {
           isBusy = true;
           frame = image;
           doFaceDetectionOnFrame();
         }
-
-        // Increment frame count
-        frameCount++;
       });
     });
   }
@@ -118,61 +122,71 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
 
   img.Image? image;
   bool register = false;
-  // TODO perform Face Recognition
+// TODO: Perform Face Recognition with buffering
   performFaceRecognition(List<Face> faces) async {
     recognitions.clear();
 
-    //TODO convert CameraImage to Image and rotate it so that our frame will be in a portrait
+    // TODO: Convert CameraImage to Image and rotate it
     image = Platform.isIOS
         ? _convertBGRA8888ToImage(frame!) as img.Image?
         : _convertNV21(frame!);
     image = img.copyRotate(image!,
         angle: camDirec == CameraLensDirection.front ? 270 : 90);
 
+    List<Recognition> currentFrameRecognitions = [];
+
     for (Face face in faces) {
       Rect faceRect = face.boundingBox;
-      //TODO crop face
+
+      // TODO: Crop face
       img.Image croppedFace = img.copyCrop(image!,
           x: faceRect.left.toInt(),
           y: faceRect.top.toInt(),
           width: faceRect.width.toInt(),
           height: faceRect.height.toInt());
 
-      //TODO pass cropped face to face recognition model
+      // TODO: Pass cropped face to face recognition model
       Recognition recognition = recognizer.recognize(croppedFace, faceRect);
-      if (recognition.distance > 1.0) {
+      if (recognition.distance > 1.0 || recognition.distance < 0.0) {
         recognition.name = "Unknown";
-      } else {
-        showAttendanceMarkedDialog(recognition.name);
       }
-      recognitions.add(recognition);
+      currentFrameRecognitions.add(recognition);
+      // Add current frame recognitions to the buffer
+      frameBuffer.add(currentFrameRecognitions);
+
+      // If buffer reaches the required size then
+      if (frameBuffer.length >= maxBufferSize) {
+        // Get the latest frame recognitions
+        List<Recognition> latestFrameRecognitions = frameBuffer.last;
+
+        // Check if any face is recognized
+        bool isVerified = false;
+        for (Recognition recognition in latestFrameRecognitions) {
+          if (recognition.distance <= 1.0 && recognition.distance >= 0.0) {
+            isVerified = true;
+            break;
+          }
+        }
+
+        // Show appropriate dialog based on recognition
+        if (isVerified) {
+          showAttendanceMarkedDialog(latestFrameRecognitions.first.name);
+        } else {
+          showFaceNotVerifiedDialog();
+        }
+
+        // Clear the buffer for the next round of frames
+        frameBuffer.clear();
+      }
     }
+
     if (mounted) {
-      setState(
-        () {
-          isBusy = false;
-          _scanResults = recognitions;
-        },
-      );
+      setState(() {
+        isBusy = false;
+        _scanResults = currentFrameRecognitions;
+      });
     }
   }
-
-  // // Play face recognition animation
-  // Future<void> playFaceRecognitionAnimation() async {
-  //   setState(() {
-  //     isAnimationPlaying = true; // Start the animation
-  //   });
-
-  //   // Show animation for 5 seconds
-  //   // await Future.delayed(const Duration(seconds: 5));
-
-  //   setState(() {
-  //     isAnimationPlaying = false; // Stop the animation
-  //   });
-
-  //   // After animation, show dialog indicating attendance marked
-  //   await showAttendanceMarkedDialog();
-  // }
 
   // Show attendance marked dialog
   Future<void> showAttendanceMarkedDialog(String name) async {
@@ -183,8 +197,40 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
       barrierDismissible: false, // Prevent dismissal of dialog
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Attendance Marked'),
+          title: const Text(
+            'Attendance Marked',
+            style: TextStyle(color: Colors.green),
+          ),
           content: Text('$name Your attendance has been successfully marked.'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> showFaceNotVerifiedDialog() async {
+    await controller.stopImageStream();
+    isStreamingFrame = false;
+    return showDialog(
+      context: context,
+      barrierDismissible: false, // Prevent dismissal of dialog
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'Unknown Face Detected',
+            style: TextStyle(color: Colors.red),
+          ),
+          content: const Text(
+            'Please register your face first to mark attendance.',
+          ),
           actions: <Widget>[
             TextButton(
               child: const Text('OK'),
@@ -363,7 +409,10 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
           children: [
             CircularProgressIndicator.adaptive(),
             SizedBox(height: 20),
-            Text("Please wait, your camera is initializing..."),
+            Text(
+              "Please wait, your camera is initializing...",
+              style: TextStyle(color: Colors.white),
+            ),
           ],
         ),
       );
@@ -372,8 +421,14 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
       controller.value.previewSize!.height,
       controller.value.previewSize!.width,
     );
-    CustomPainter painter =
-        FaceDetectorPainter(imageSize, _scanResults, camDirec);
+    CustomPainter painter = FaceDetectorPainter(
+      imageSize,
+      _scanResults,
+      camDirec,
+      _animationController.value,
+    );
+    _scanResults = [];
+
     return CustomPaint(
       painter: painter,
     );
@@ -406,6 +461,8 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
     }
     controller?.dispose();
     faceDetector.close();
+    _animationController.stop();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -470,7 +527,7 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
               ),
             ),
           )
-        : SizedBox();
+        : const SizedBox();
 
     return SafeArea(
       child: Scaffold(
@@ -487,11 +544,13 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance> {
 }
 
 class FaceDetectorPainter extends CustomPainter {
-  FaceDetectorPainter(this.absoluteImageSize, this.faces, this.camDire2);
+  FaceDetectorPainter(
+      this.absoluteImageSize, this.faces, this.camDire2, this.animationValue);
 
   final Size absoluteImageSize;
-  final List<Recognition> faces;
-  CameraLensDirection camDire2;
+  final List<Recognition>? faces;
+  final CameraLensDirection camDire2;
+  final double animationValue; // Controlling the scanning effect
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -503,21 +562,41 @@ class FaceDetectorPainter extends CustomPainter {
       ..strokeWidth = 2.0
       ..color = Colors.indigoAccent;
 
-    for (Recognition face in faces) {
-      canvas.drawRect(
-        Rect.fromLTRB(
-          camDire2 == CameraLensDirection.front
-              ? (absoluteImageSize.width - face.location.right) * scaleX
-              : face.location.left * scaleX,
-          face.location.top * scaleY,
-          camDire2 == CameraLensDirection.front
-              ? (absoluteImageSize.width - face.location.left) * scaleX
-              : face.location.right * scaleX,
-          face.location.bottom * scaleY,
-        ),
-        paint,
+    // Paint for the scanning effect
+    final Paint scanPaint = Paint()
+      ..color = Colors.red.withOpacity(0.7) // Change to red color
+      ..strokeWidth = 3.0;
+
+    for (Recognition face in faces!) {
+      // Drawing the face bounding box
+      final Rect faceRect = Rect.fromLTRB(
+        camDire2 == CameraLensDirection.front
+            ? (absoluteImageSize.width - face.location.right) * scaleX
+            : face.location.left * scaleX,
+        face.location.top * scaleY,
+        camDire2 == CameraLensDirection.front
+            ? (absoluteImageSize.width - face.location.left) * scaleX
+            : face.location.right * scaleX,
+        face.location.bottom * scaleY,
       );
 
+      canvas.drawRect(faceRect, paint);
+
+      // Adding scanning effect within the bounding box
+      // Calculate the scanning line's position
+      final double linePositionY =
+          faceRect.top + (faceRect.height * animationValue);
+
+      // Ensure the line stays within the bounding box
+      final double lineY = linePositionY.clamp(faceRect.top, faceRect.bottom);
+
+      canvas.drawLine(
+        Offset(faceRect.left, lineY),
+        Offset(faceRect.right, lineY),
+        scanPaint,
+      );
+
+      // Drawing the text (name and distance)
       TextSpan span = TextSpan(
           style: const TextStyle(color: Colors.white, fontSize: 20),
           text: "${face.name}  ${face.distance.toStringAsFixed(2)}");
@@ -533,11 +612,9 @@ class FaceDetectorPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(FaceDetectorPainter oldDelegate) {
-    return true;
+    return oldDelegate.faces != faces ||
+        oldDelegate.camDire2 != camDire2 ||
+        oldDelegate.animationValue !=
+            animationValue; // Repaint when animation value changes
   }
-}
-
-@override
-Widget build(BuildContext context) {
-  return const Placeholder();
 }
