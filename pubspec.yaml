@@ -41,7 +41,6 @@ dependencies:
   camera: ^0.10.6
   sqflite: ^2.3.3+1
   path_provider: ^2.1.4
-  screen_loader: ^4.0.1
   geolocator: ^13.0.1
 
 dev_dependencies:

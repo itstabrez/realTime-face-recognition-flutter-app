@@ -504,14 +504,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.2.2"
-  screen_loader:
-    dependency: "direct main"
-    description:
-      name: screen_loader
-      sha256: "8196088af07bf6e7dce0916e6a25c199e15e3c6c2e9a8ed5500db89eb030830d"
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.0.1"
   sky_engine:
     dependency: transitive
     description: flutter
@@ -565,14 +557,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.2"
-  stream_mixin:
-    dependency: transitive
-    description:
-      name: stream_mixin
-      sha256: "6761f1098c03c7f4a087ae192583d7ddb421dd54e22091261f02cc2a7669c757"
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.0.4"
   stream_transform:
     dependency: transitive
     description:
