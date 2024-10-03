@@ -25,7 +25,7 @@ class MyApp extends StatelessWidget {
           MyRoutes.registerRoute: (context) => RegisterUser(
                 cameras: cameras,
               ),
-          MyRoutes.homeRoute: (context) => HomePage(),
+          MyRoutes.homeRoute: (context) => const HomePage(),
         });
   }
 }

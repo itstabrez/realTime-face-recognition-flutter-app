@@ -4,10 +4,8 @@ import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 class FacePainter extends CustomPainter {
   List<Face> facesList;
   dynamic imageFile;
-  FacePainter({
-    required this.facesList,
-    required this.imageFile,
-  });
+  FacePainter({required this.facesList, @required this.imageFile});
+
   @override
   void paint(Canvas canvas, Size size) {
     if (imageFile != null) {
@@ -25,7 +23,7 @@ class FacePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+  bool shouldRepaint(CustomPainter oldDelegate) {
     return true;
   }
 }

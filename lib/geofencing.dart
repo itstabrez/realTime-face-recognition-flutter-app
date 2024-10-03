@@ -81,11 +81,11 @@ class GeofencingService {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Out of Range'),
-          content: Text('You are outside the allowed geofenced area.'),
+          title: const Text('Out of Range'),
+          content: const Text('You are outside the allowed geofenced area.'),
           actions: <Widget>[
             TextButton(
-              child: Text('OK'),
+              child: const Text('OK'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
@@ -102,11 +102,11 @@ class GeofencingService {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Location Services Disabled'),
-          content: Text('Please enable location services to continue.'),
+          title: const Text('Location Services Disabled'),
+          content: const Text('Please enable location services to continue.'),
           actions: <Widget>[
             TextButton(
-              child: Text('OK'),
+              child: const Text('OK'),
               onPressed: () {
                 Navigator.of(context).pop();
                 // Exit the app

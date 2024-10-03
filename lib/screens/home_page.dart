@@ -1,9 +1,5 @@
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:realtime_face_recognition/main.dart';
 import 'package:realtime_face_recognition/routes.dart';
-import 'package:realtime_face_recognition/screens/mark_user_attendance.dart';
-import 'package:realtime_face_recognition/screens/register_user.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});

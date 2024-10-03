@@ -7,7 +7,7 @@ import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image/image.dart' as img;
 import 'package:realtime_face_recognition/ML/Recognition.dart';
 import 'package:realtime_face_recognition/ML/Recognizer.dart';
-import 'package:realtime_face_recognition/routes.dart';
+import 'package:realtime_face_recognition/geofencing.dart';
 
 class MarkUserAttendance extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -85,7 +85,7 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance>
         imageFormatGroup: Platform.isAndroid
             ? ImageFormatGroup.nv21 // for Android
             : ImageFormatGroup.bgra8888,
-        enableAudio: false); // for iOS
+        enableAudio: true); // for iOS
     await controller.initialize().then((_) {
       if (!mounted) {
         return;
@@ -131,7 +131,7 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance>
         ? _convertBGRA8888ToImage(frame!) as img.Image?
         : _convertNV21(frame!);
     image = img.copyRotate(image!,
-        angle: camDirec == CameraLensDirection.front ? 270 : 90);
+        angle: camDirec == CameraLensDirection.front ? 360 : 90);
 
     List<Recognition> currentFrameRecognitions = [];
 
@@ -147,7 +147,7 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance>
 
       // TODO: Pass cropped face to face recognition model
       Recognition recognition = recognizer.recognize(croppedFace, faceRect);
-      if (recognition.distance > 1.0 || recognition.distance < 0.0) {
+      if (recognition.distance > 0.75 || recognition.distance < 0.00) {
         recognition.name = "Unknown";
       }
       currentFrameRecognitions.add(recognition);
@@ -162,7 +162,7 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance>
         // Check if any face is recognized
         bool isVerified = false;
         for (Recognition recognition in latestFrameRecognitions) {
-          if (recognition.distance <= 1.0 && recognition.distance >= 0.0) {
+          if (recognition.distance <= 0.75 && recognition.distance >= 0.00) {
             isVerified = true;
             break;
           }
