@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
@@ -16,11 +17,13 @@ class GeofencingService {
   });
 
   // Check if the device is within the geofenced area
-  Future<void> checkDeviceInRange() async {
+  Future<bool> checkDeviceInRange() async {
     bool isInRange = await _isWithinGeofence();
 
     if (!isInRange) {
-      _showOutOfRangeDialog();
+      return false;
+    } else {
+      return true;
     }
   }
 
@@ -32,6 +35,7 @@ class GeofencingService {
     // Check if location services are enabled
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
+      Navigator.pop(context);
       await _showLocationServicesDisabledDialog();
       return Future.error('Location services are disabled.');
     }
@@ -73,27 +77,6 @@ class GeofencingService {
       print('Error: $e');
       return false;
     }
-  }
-
-  // Show dialog if the device is out of range
-  void _showOutOfRangeDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Out of Range'),
-          content: const Text('You are outside the allowed geofenced area.'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
   }
 
   // Show a dialog when location services are disabled

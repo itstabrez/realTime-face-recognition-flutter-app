@@ -200,36 +200,46 @@ class _RegisterUserState extends State<RegisterUser> {
       body: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          image != null
-              ?
-              // Container(
-              //         margin: const EdgeInsets.only(top: 100),
-              //         width: screenWidth - 50,
-              //         height: screenWidth - 50,
-              //         child: Image.file(_image!),
-              //       )
-              Container(
-                  margin: const EdgeInsets.only(
-                      top: 60, left: 30, right: 30, bottom: 0),
-                  child: FittedBox(
-                    child: SizedBox(
-                      width: image.width.toDouble(),
-                      height: image.width.toDouble(),
-                      child: CustomPaint(
-                        painter:
-                            FacePainter(facesList: faces, imageFile: image),
+          isLoading
+              ? SizedBox(
+                  height: screenHeight / 2,
+                  width: screenWidth,
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Please Wait Your image is processing",
+                        style: TextStyle(
+                            color: Colors.red, fontWeight: FontWeight.bold),
                       ),
-                    ),
+                      CircularProgressIndicator(),
+                    ],
                   ),
                 )
-              : Container(
-                  margin: const EdgeInsets.only(top: 100),
-                  child: Image.asset(
-                    "images/logo.png",
-                    width: screenWidth - 100,
-                    height: screenWidth - 100,
-                  ),
-                ),
+              : image != null
+                  ? Container(
+                      margin: const EdgeInsets.only(
+                          top: 60, left: 30, right: 30, bottom: 0),
+                      child: FittedBox(
+                        child: SizedBox(
+                          width: image.width.toDouble(),
+                          height: image.width.toDouble(),
+                          child: CustomPaint(
+                            painter:
+                                FacePainter(facesList: faces, imageFile: image),
+                          ),
+                        ),
+                      ),
+                    )
+                  : Container(
+                      margin: const EdgeInsets.only(top: 100),
+                      child: Image.asset(
+                        "images/logo.png",
+                        width: screenWidth - 100,
+                        height: screenWidth - 100,
+                      ),
+                    ),
 
           Container(
             height: 50,

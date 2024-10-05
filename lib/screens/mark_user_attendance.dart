@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:camera/camera.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -29,9 +30,11 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance>
   late CameraDescription description;
   CameraLensDirection camDirec = CameraLensDirection.front;
   late List<Recognition> recognitions = [];
-  bool isStreamingFrame = true;
+  bool isStreamingFrame = false;
   bool isDetecting = true;
   late AnimationController _animationController;
+  bool isInGeoFence = false;
+  bool isLoading = true;
 
   //TODO declare face detector
   late FaceDetector faceDetector;
@@ -40,7 +43,7 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance>
   late Recognizer recognizer;
 
   // Instantiate the GeofencingService
-  // late GeofencingService geofencingService;
+  late GeofencingService geofencingService;
 
   @override
   void initState() {
@@ -59,21 +62,65 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance>
     //TODO initialize face recognizer
     recognizer = Recognizer();
 
+    bool isConnected = await _isConnectedToNetwork();
+
     // Initialize the GeofencingService with context and geofence details
-    // Mayoor School Noida is the testing location
+    // MY CURRENT LOCATION
     // geofencingService = GeofencingService(
     //   context: context,
-    //   targetLatitude: 28.54405692031371, // Example latitude
-    //   targetLongitude: 77.33769928770626, // Example longitude
+    //   targetLatitude: 24.951708, // Example latitude
+    //   targetLongitude: 86.186671, // Example longitude
     //   radiusInMeters: 100.0, // Example radius
     // );
+    //YASIR CURRENT LOCATION
+    geofencingService = GeofencingService(
+      context: context,
+      targetLatitude: 25.605028, // Example latitude
+      targetLongitude: 85.078028, // Example longitude
+      radiusInMeters: 300.0, // Example radius
+    );
 
     _animationController = AnimationController(
       duration: const Duration(seconds: 1),
       vsync: this,
     )..repeat(reverse: true); // Repeats the animation back and forth
     // Initialize camera footage
-    await initializeCamera();
+    setState(() {
+      isLoading = true;
+    });
+
+    if (!isConnected) {
+      // Show a dialog if the device is offline
+      Navigator.pop(context);
+      _showNoNetworkDialog();
+    } else {
+      isInGeoFence = await geofencingService.checkDeviceInRange();
+      if (isInGeoFence) {
+        setState(() {
+          isLoading = false;
+        });
+        await initializeCamera();
+      } else if (!isInGeoFence) {
+        setState(() {
+          isLoading = false;
+        });
+        _showOutOfRangeDialog();
+      }
+    }
+  }
+
+  // Check if the device is connected to the internet
+  Future<bool> _isConnectedToNetwork() async {
+    final List<ConnectivityResult> connectivityResult =
+        await (Connectivity().checkConnectivity());
+
+    if (connectivityResult.contains(ConnectivityResult.mobile) ||
+        connectivityResult.contains(ConnectivityResult.wifi) ||
+        connectivityResult.contains(ConnectivityResult.ethernet)) {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   List<List<Recognition>> frameBuffer = [];
@@ -92,14 +139,57 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance>
       }
 
       controller.startImageStream((image) {
-        // Skip frames based on the frameSkip value
         if (!isBusy) {
+          isStreamingFrame = true;
           isBusy = true;
           frame = image;
           doFaceDetectionOnFrame();
         }
       });
     });
+  }
+
+  // Show a dialog when the network is not available
+  void _showNoNetworkDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('No Network Connection'),
+          content: const Text('Please connect to a network to continue.'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Show dialog if the device is out of range
+  void _showOutOfRangeDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Out of Range'),
+          content: const Text('You are outside the allowed geofenced area.'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   //TODO face detection on a frame
@@ -130,8 +220,11 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance>
     image = Platform.isIOS
         ? _convertBGRA8888ToImage(frame!) as img.Image?
         : _convertNV21(frame!);
-    image = img.copyRotate(image!,
-        angle: camDirec == CameraLensDirection.front ? 360 : 90);
+    image = Platform.isIOS
+        ? img.copyRotate(image!,
+            angle: camDirec == CameraLensDirection.front ? 360 : 90)
+        : img.copyRotate(image!,
+            angle: camDirec == CameraLensDirection.front ? 270 : 90);
 
     List<Recognition> currentFrameRecognitions = [];
 
@@ -443,7 +536,9 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance>
       camDirec = CameraLensDirection.back;
       description = widget.cameras[0];
     }
-    await controller.stopImageStream();
+    if (isStreamingFrame) {
+      await controller.stopImageStream();
+    }
     if (mounted) {
       setState(() {
         controller;
@@ -501,7 +596,7 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance>
     }
 
     //TODO View for displaying the bar to switch camera direction
-    controller.value.isInitialized
+    isStreamingFrame
         ? stackChildren.add(
             Positioned(
               bottom: 50,
