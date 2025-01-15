@@ -47,7 +47,6 @@ class Recognizer {
       Recognition recognition =
           Recognition(row[DatabaseHelper.columnName], Rect.zero, embd, 0);
       registered.putIfAbsent(name, () => recognition);
-      print("R=" + name);
     }
   }
 

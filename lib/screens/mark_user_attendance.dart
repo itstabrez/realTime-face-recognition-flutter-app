@@ -66,19 +66,19 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance>
 
     // Initialize the GeofencingService with context and geofence details
     // MY CURRENT LOCATION
-    // geofencingService = GeofencingService(
-    //   context: context,
-    //   targetLatitude: 24.951708, // Example latitude
-    //   targetLongitude: 86.186671, // Example longitude
-    //   radiusInMeters: 100.0, // Example radius
-    // );
-    //YASIR CURRENT LOCATION
     geofencingService = GeofencingService(
       context: context,
-      targetLatitude: 25.605028, // Example latitude
-      targetLongitude: 85.078028, // Example longitude
-      radiusInMeters: 300.0, // Example radius
+      targetLatitude: 24.951708, // Example latitude
+      targetLongitude: 86.186671, // Example longitude
+      radiusInMeters: 100.0, // Example radius
     );
+    //YASIR CURRENT LOCATION
+    // geofencingService = GeofencingService(
+    //   context: context,
+    //   targetLatitude: 25.605028, // Example latitude
+    //   targetLongitude: 85.078028, // Example longitude
+    //   radiusInMeters: 300.0, // Example radius
+    // );
 
     _animationController = AnimationController(
       duration: const Duration(seconds: 1),
@@ -96,15 +96,19 @@ class _MarkUserAttendanceState extends State<MarkUserAttendance>
     } else {
       isInGeoFence = await geofencingService.checkDeviceInRange();
       if (isInGeoFence) {
-        setState(() {
-          isLoading = false;
-        });
-        await initializeCamera();
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+          await initializeCamera();
+        }
       } else if (!isInGeoFence) {
-        setState(() {
-          isLoading = false;
-        });
-        _showOutOfRangeDialog();
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+          _showOutOfRangeDialog();
+        }
       }
     }
   }
